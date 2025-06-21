@@ -189,7 +189,6 @@
         #custom-keyboard button.decimal-btn:active {
             background-color: #0056b3;
         }
-        /* Кнопка "Далее" удалена, поэтому её стили тоже не нужны */
 
         /* Медиа-запрос для широких планшетов/десктопов, чтобы не делать слишком узко */
         @media (min-width: 768px) {
@@ -285,6 +284,9 @@
                 </div>
 
             </form>
+            <div class="d-grid gap-2 mt-3 mb-2">
+                <button id="clearDataBtn" class="btn btn-secondary btn-sm">Очистить</button>
+            </div>
             <div id="result" class="mt-4 p-3 border rounded">
                 <h4 class="text-center">Результат:</h4>
                 <p id="player1_sum"></p>

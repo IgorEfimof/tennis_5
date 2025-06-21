@@ -15,35 +15,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Функция для блокировки нативной клавиатуры
     function preventNativeKeyboard(e) {
-        // e.preventDefault(); // Это может вызвать проблемы с фокусом
-        // Вместо preventDefault, мы полагаемся на readonly и focus()
         if (e.relatedTarget && e.relatedTarget.tagName === 'BUTTON') {
-             // Игнорируем blur, если фокус переходит на кнопку клавиатуры
              return;
         }
-        // console.log('preventNativeKeyboard blur on', e.target.id);
     }
 
     // --- Keyboard Logic ---
     function showKeyboard(input) {
         console.log('showKeyboard called for input:', input.id);
         if (activeInput === input && keyboardContainer.classList.contains('show')) {
-            // Клавиатура уже показана для этого инпута, ничего не делаем
             return;
         }
 
         activeInput = input;
         
-        // Убедимся, что нативная клавиатура не появляется
-        input.blur(); // Снимаем фокус с поля, чтобы нативная клавиатура не вылезла
-        setTimeout(() => { // Даем браузеру время обработать blur
-            input.focus(); // Снова устанавливаем фокус, чтобы активное поле было подсвечено
-            input.setSelectionRange(input.value.length, input.value.length); // Переводим курсор в конец
-            keyboardContainer.style.display = 'flex'; // Показываем контейнер
+        input.blur(); 
+        setTimeout(() => {
+            input.focus(); 
+            input.setSelectionRange(input.value.length, input.value.length); 
+            keyboardContainer.style.display = 'flex'; 
             setTimeout(() => {
-                keyboardContainer.classList.add('show'); // Запускаем анимацию
-            }, 50); // Небольшая задержка для плавности
-        }, 50); // Небольшая задержка перед попыткой фокуса снова
+                keyboardContainer.classList.add('show'); 
+            }, 50); 
+        }, 50); 
 
         resultDiv.classList.remove('visible');
         errorDiv.classList.remove('visible');
@@ -55,10 +49,9 @@ document.addEventListener('DOMContentLoaded', function() {
         keyboardContainer.addEventListener('transitionend', function handler() {
             keyboardContainer.style.display = 'none';
             keyboardContainer.removeEventListener('transitionend', handler);
-            activeInput = null; // Очищаем активный инпут только после полного скрытия
-        }, { once: true }); // Убедимся, что обработчик сработает только один раз
+            activeInput = null; 
+        }, { once: true }); 
         
-        // После скрытия клавиатуры, пересчитываем и показываем результат
         calculateWinner(); 
     }
 
@@ -67,34 +60,20 @@ document.addEventListener('DOMContentLoaded', function() {
         if (input) {
             input.addEventListener('focus', function(e) {
                 console.log('Input focused:', this.id, 'from event:', e.type);
-                // Отключаем нативную клавиатуру при фокусе, если она всё равно пытается вылезти
-                // this.blur(); 
-                // setTimeout(() => {
-                //     this.focus();
-                // }, 0); 
                 showKeyboard(this);
             });
 
-            // На мобильных touchstart иногда работает лучше для инициации фокуса
             input.addEventListener('touchstart', function(e) {
                 console.log('Input touchstarted:', this.id);
-                // Предотвращаем дефолтное поведение, чтобы избежать нативной клавиатуры
                 e.preventDefault(); 
                 if (document.activeElement !== this) {
-                    this.focus(); // Принудительно устанавливаем фокус
+                    this.focus(); 
                 }
-            }, { passive: false }); // Важно: passive: false для preventDefault
+            }, { passive: false }); 
 
-            // Если поле было в фокусе, но пользователь коснулся где-то ещё, не на кнопке клавиатуры
             input.addEventListener('blur', function(e) {
                 console.log('Input blurred:', this.id, 'relatedTarget:', e.relatedTarget ? e.relatedTarget.tagName : 'none');
-                // Если фокус ушел на другую часть страницы, а не на кнопку клавиатуры
-                if (e.relatedTarget === null || !keyboard.contains(e.relatedTarget)) {
-                    // console.log('Blur outside keyboard, might hide.');
-                    // hideKeyboard(); // Возможно, потребуется скрыть клавиатуру
-                                    // Это может привести к миганию, если пользователь быстро переключается
-                                    // Лучше скрывать по кнопке "Далее" или когда все заполнено
-                }
+                // Логика скрытия клавиатуры здесь не меняется, она скрывается при нажатии на последнюю кнопку или когда последнее поле заполнено.
             });
 
             input.addEventListener('input', function(e) {
@@ -107,14 +86,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 this.value = val;
 
+                // Автоматический переход к следующему полю, если текущее заполнено
                 if (this.value.length === this.maxLength) {
                     const currentIndex = inputElements.indexOf(this);
                     if (currentIndex !== -1 && currentIndex < inputElements.length - 1) {
                         setTimeout(() => {
                             inputElements[currentIndex + 1].focus();
-                        }, 100); // Немного увеличенная задержка
+                        }, 100); 
                     } else if (currentIndex === inputElements.length - 1) {
-                        // Если это последнее поле и оно заполнено, снять фокус и скрыть клавиатуру
+                        // Если это последнее поле, скрываем клавиатуру
                         this.blur(); 
                         hideKeyboard();
                     }
@@ -125,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Обработчик кликов по кнопкам клавиатуры
     keyboard.addEventListener('click', function(e) {
-        e.preventDefault(); // Предотвращаем дефолтное поведение (например, потеря фокуса)
+        e.preventDefault(); 
         const button = e.target.closest('button');
         if (!button) return;
 
@@ -151,22 +131,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (activeInput.value.length < activeInput.maxLength) {
                 activeInput.value += key;
             }
-        } else if (key === 'next') {
-            const currentIndex = inputElements.indexOf(activeInput);
-            if (currentIndex !== -1 && currentIndex < inputElements.length - 1) {
-                // Сначала убедимся, что фокус переходит, затем скроем
-                activeInput.blur(); // Снимаем фокус с текущего поля
-                inputElements[currentIndex + 1].focus(); // Устанавливаем фокус на следующее
-            } else {
-                hideKeyboard();
-            }
-        } else { // Числовые кнопки (1-9)
+        }
+        // Логика для кнопки 'next' удалена
+        else { // Числовые кнопки (1-9)
             if (activeInput.value.length < activeInput.maxLength) {
                 activeInput.value += key;
             }
         }
         
-        // Триггерим событие input
         const event = new Event('input', { bubbles: true });
         activeInput.dispatchEvent(event);
     });
@@ -229,6 +201,8 @@ document.addEventListener('DOMContentLoaded', function() {
         errorText.textContent = ''; 
         errorDiv.classList.remove('visible'); 
         
+        // Показываем результат только если клавиатура не активна
+        // Или если она активна, но пользователь нажал на последнее поле и оно заполнилось
         if (!keyboardContainer.classList.contains('show')) {
             resultDiv.classList.add('visible'); 
         }

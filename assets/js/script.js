@@ -12,8 +12,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const keyboardContainer = document.getElementById('custom-keyboard-container');
     const keyboard = document.getElementById('custom-keyboard');
     let activeInput = null;
+    const clearDataBtn = document.getElementById('clearDataBtn'); // НОВАЯ КОНСТАНТА ДЛЯ КНОПКИ ОЧИСТИТЬ
 
-    // Функция для блокировки нативной клавиатуры
+    // Функция для блокировки нативной клавиатуры (осталась для контроля)
     function preventNativeKeyboard(e) {
         if (e.relatedTarget && e.relatedTarget.tagName === 'BUTTON') {
              return;
@@ -73,7 +74,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             input.addEventListener('blur', function(e) {
                 console.log('Input blurred:', this.id, 'relatedTarget:', e.relatedTarget ? e.relatedTarget.tagName : 'none');
-                // Логика скрытия клавиатуры здесь не меняется, она скрывается при нажатии на последнюю кнопку или когда последнее поле заполнено.
+                // Логика скрытия клавиатуры здесь не меняется, она скрывается при нажатии на последнюю кнопку или когда последнее поле заполнено
             });
 
             input.addEventListener('input', function(e) {
@@ -132,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 activeInput.value += key;
             }
         }
-        // Логика для кнопки 'next' удалена
+        // Логика для кнопки 'next' была удалена
         else { // Числовые кнопки (1-9)
             if (activeInput.value.length < activeInput.maxLength) {
                 activeInput.value += key;
@@ -142,6 +143,34 @@ document.addEventListener('DOMContentLoaded', function() {
         const event = new Event('input', { bubbles: true });
         activeInput.dispatchEvent(event);
     });
+
+    // --- Новая функция очистки данных ---
+    function clearAllData() {
+        console.log('Clearing all data...');
+        // Очищаем все поля ввода
+        inputElements.forEach(input => {
+            input.value = '';
+            input.classList.remove('is-invalid');
+        });
+
+        // Скрываем блоки результата и ошибки
+        resultDiv.classList.remove('visible');
+        errorDiv.classList.remove('visible');
+        errorText.textContent = ''; // Очищаем текст ошибки
+
+        // Возвращаем фокус на первое поле (опционально)
+        if (inputElements.length > 0) {
+            inputElements[0].focus();
+        }
+        
+        // Пересчитываем, чтобы обновить состояние после очистки (покажет начальное сообщение)
+        calculateWinner(); 
+    }
+
+    // Обработчик события для кнопки "Очистить"
+    if (clearDataBtn) {
+        clearDataBtn.addEventListener('click', clearAllData);
+    }
 
     // --- Main Calculation Function (unchanged) ---
     function calculateWinner() {

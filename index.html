@@ -140,20 +140,20 @@
             z-index: 1000;
             transform: translateY(100%);
             transition: transform 0.3s ease-out;
-            display: none;
+            display: none; /* Изначально скрыто */
         }
 
         #custom-keyboard-container.show {
             transform: translateY(0);
-            display: flex;
+            display: flex; /* Показываем как flex-контейнер */
         }
 
         #custom-keyboard {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            max-width: 300px;
-            margin: 0 auto;
+            grid-template-columns: repeat(3, 1fr); /* 3 колонки */
+            gap: 8px; /* Расстояние между кнопками */
+            max-width: 300px; /* Ограничиваем ширину клавиатуры */
+            margin: 0 auto; /* Центрируем клавиатуру */
         }
 
         #custom-keyboard button {
@@ -169,8 +169,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            -webkit-user-select: none;
-            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            -webkit-user-select: none; /* Отключаем выделение текста */
+            -webkit-tap-highlight-color: rgba(0,0,0,0); /* Убираем эффект нажатия на iOS */
         }
 
         #custom-keyboard button:active {
@@ -178,26 +178,18 @@
         }
 
         #custom-keyboard button.delete-btn {
-            background-color: #dc3545;
+            background-color: #dc3545; /* Красная для удаления */
         }
         #custom-keyboard button.delete-btn:active {
             background-color: #c82333;
         }
         #custom-keyboard button.decimal-btn {
-            background-color: #007bff;
+            background-color: #007bff; /* Синяя для точки */
         }
         #custom-keyboard button.decimal-btn:active {
             background-color: #0056b3;
         }
-        #custom-keyboard button.next-btn {
-            background-color: #28a745;
-            grid-column: span 3;
-            height: 40px;
-            font-size: 1.2rem;
-        }
-         #custom-keyboard button.next-btn:active {
-            background-color: #218838;
-        }
+        /* Кнопка "Далее" удалена, поэтому её стили тоже не нужны */
 
         /* Медиа-запрос для широких планшетов/десктопов, чтобы не делать слишком узко */
         @media (min-width: 768px) {
@@ -326,8 +318,7 @@
             <button data-key="delete" class="delete-btn">←</button>
             <button data-key="0">0</button>
             <button data-key="." class="decimal-btn">.</button>
-            <button data-key="next" class="next-btn">Далее</button>
-        </div>
+            </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

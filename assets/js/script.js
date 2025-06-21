@@ -1,102 +1,107 @@
 document.addEventListener('DOMContentLoaded', function() {
     const games = [5, 6, 7, 8, 9, 10];
     const fields = games.flatMap(g => [`g${g}P1`, `g${g}P2`]);
+    const inputElements = fields.map(id => document.getElementById(id));
 
-    // Input and paste handling functions (unchanged from previous version)
-    function handleCoeffInput(e, idx) {
-        let input = e.target;
-        let val = input.value.replace(/[^\d]/g, ''); 
-        if (val.length === 3) {
-            val = val.substring(0, 1) + '.' + val.substring(1, 3);
-        } else if (val.length > 3) {
-            val = val.substring(0, 1) + '.' + val.substring(1, 3);
-        }
-        input.value = val;
-        if (val.length === 4) {
-            if (idx === fields.length - 1) {
-                input.blur();
-                calculateWinner();
-            } else {
-                const nextInput = document.getElementById(fields[idx + 1]);
-                if (nextInput) {
-                    nextInput.focus();
-                } else {
-                    input.blur();
-                    calculateWinner();
-                }
-            }
-        }
-        calculateWinner();
+    const resultDiv = document.getElementById('result');
+    const errorDiv = document.getElementById('error');
+    const errorText = document.getElementById('error'); 
+
+    const keyboardContainer = document.getElementById('custom-keyboard-container');
+    const keyboard = document.getElementById('custom-keyboard');
+    let activeInput = null; // Переменная для отслеживания активного поля ввода
+
+    // --- Keyboard Logic ---
+    function showKeyboard(input) {
+        activeInput = input;
+        keyboardContainer.classList.add('show');
+        resultDiv.classList.remove('visible'); // Скрываем результат при открытии клавиатуры
+        errorDiv.classList.remove('visible'); // Скрываем ошибки при открытии клавиатуры
     }
 
-    function handleCoeffPaste(e, idx) {
-        e.preventDefault();
-        let input = e.target;
-        let text = (e.clipboardData || window.clipboardData).getData('text');
-        text = text.replace(/[^\d]/g, '');
-        if (text.length === 3) {
-            text = text.substring(0, 1) + '.' + text.substring(1, 3);
-        } else if (text.length > 3) {
-            text = text.substring(0, 1) + '.' + text.substring(1, 3); 
-        } else if (text.length === 2) {
-             text = '1.' + text;
-        }
-        input.value = text;
-        if (text.length === 4) {
-            if (idx === fields.length - 1) {
-                input.blur();
-                calculateWinner();
-            } else {
-                const nextInput = document.getElementById(fields[idx + 1]);
-                if (nextInput) {
-                    nextInput.focus();
-                } else {
-                    input.blur();
-                    calculateWinner();
-                }
-            }
-        }
-        calculateWinner();
+    function hideKeyboard() {
+        activeInput = null;
+        keyboardContainer.classList.remove('show');
+        calculateWinner(); // Пересчитываем и показываем результат, когда клавиатура скрывается
     }
 
-    fields.forEach((id, idx) => {
-        const input = document.getElementById(id);
+    // Обработчики событий для полей ввода (фокус/блюр)
+    inputElements.forEach((input, index) => {
         if (input) {
-            input.setAttribute('maxlength', '4');
-            input.setAttribute('inputmode', 'decimal');
-            input.classList.add('text-center');
-            input.addEventListener('input', (e) => handleCoeffInput(e, idx));
-            input.addEventListener('paste', (e) => handleCoeffPaste(e, idx));
-            input.addEventListener('keypress', function(event) {
-                if (event.key === '.') {
-                    if (input.value.includes('.')) {
-                        event.preventDefault();
-                    }
-                    return;
+            // При фокусе на поле ввода показываем клавиатуру
+            input.addEventListener('focus', function() {
+                showKeyboard(this);
+            });
+
+            // Для мобильных устройств: иногда blur не срабатывает, используем touchstart на body
+            // Но чтобы не скрывать сразу, нужно управлять этим осторожно
+            // Пока оставляем hideKeyboard только по "Далее" или после заполнения всех полей
+            input.addEventListener('blur', function() {
+                // Не скрываем сразу, чтобы можно было переключиться на другое поле или дозаполнить
+                // Скрытие будет по кнопке "Далее" или когда все поля заполнены
+            });
+
+            // Настроим обработку input для форматирования и перехода
+            input.addEventListener('input', function(e) {
+                let val = this.value.replace(/[^\d]/g, ''); 
+                if (val.length === 3) {
+                    val = val.substring(0, 1) + '.' + val.substring(1, 3);
+                } else if (val.length > 3) {
+                    val = val.substring(0, 1) + '.' + val.substring(1, 3);
                 }
-                if (!/\d/.test(event.key) && event.key !== 'Backspace' && event.key !== 'Enter') {
-                    event.preventDefault();
-                }
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    if (idx === fields.length - 1) {
-                        input.blur();
-                        calculateWinner();
-                    } else {
-                        const nextInput = document.getElementById(fields[idx + 1]);
-                        if (nextInput) {
-                            nextInput.focus();
-                        } else {
-                            input.blur();
-                            calculateWinner();
-                        }
-                    }
+                this.value = val;
+
+                if (this.value.length === this.maxLength && index < inputElements.length - 1) {
+                    // Если текущее поле заполнено и это не последнее поле, переходим к следующему
+                    inputElements[index + 1].focus();
+                } else if (this.value.length === this.maxLength && index === inputElements.length - 1) {
+                    // Если заполнено последнее поле, скрываем клавиатуру и считаем
+                    this.blur();
+                    hideKeyboard();
                 }
             });
         }
     });
 
-    // Main calculation function
+    // Обработчик кликов по кнопкам клавиатуры
+    keyboard.addEventListener('click', function(e) {
+        if (!activeInput) return; // Если нет активного поля, ничего не делаем
+
+        const button = e.target.closest('button');
+        if (!button) return;
+
+        const key = button.dataset.key;
+
+        if (key === 'delete') {
+            activeInput.value = activeInput.value.slice(0, -1);
+        } else if (key === '.') {
+            if (!activeInput.value.includes('.')) {
+                // Если поле пустое и вводим '.', начинаем с '1.'
+                if (activeInput.value === '') {
+                    activeInput.value = '1.';
+                } else {
+                    activeInput.value += '.';
+                }
+            }
+        } else if (key === 'next') {
+            const currentIndex = inputElements.indexOf(activeInput);
+            if (currentIndex !== -1 && currentIndex < inputElements.length - 1) {
+                inputElements[currentIndex + 1].focus(); // Переходим к следующему полю
+            } else {
+                hideKeyboard(); // Если последнее поле или нет следующего, скрываем клавиатуру
+            }
+        } else { // Числовые кнопки
+            if (activeInput.value.length < activeInput.maxLength) {
+                activeInput.value += key;
+            }
+        }
+        
+        // Триггерим событие input, чтобы сработала логика форматирования и перехода
+        const event = new Event('input', { bubbles: true });
+        activeInput.dispatchEvent(event);
+    });
+
+    // --- Main Calculation Function (unchanged from previous version, just ensure visibility handling) ---
     function calculateWinner() {
         let player1Coeffs = [];
         let player2Coeffs = [];
@@ -110,46 +115,56 @@ document.addEventListener('DOMContentLoaded', function() {
                 const p1Val = parseFloat(p1Input.value);
                 const p2Val = parseFloat(p2Input.value);
 
+                // Validation for Player 1
                 if (!isNaN(p1Val) && p1Val >= 1.00 && p1Val <= 10.00) { 
                     player1Coeffs.push(p1Val);
                     p1Input.classList.remove('is-invalid');
-                } else if (p1Input.value.length > 0) {
+                } else if (p1Input.value.length > 0) { // If there's input but it's invalid
                     p1Input.classList.add('is-invalid');
                     allCoeffsValid = false;
-                } else {
+                } else { // If input is empty
                     player1Coeffs.push(NaN);
-                    p1Input.classList.remove('is-invalid');
+                    p1Input.classList.remove('is-invalid'); // Not invalid if just empty
                 }
 
+                // Validation for Player 2
                 if (!isNaN(p2Val) && p2Val >= 1.00 && p2Val <= 10.00) {
                     player2Coeffs.push(p2Val);
                     p2Input.classList.remove('is-invalid');
-                } else if (p2Input.value.length > 0) {
+                } else if (p2Input.value.length > 0) { // If there's input but it's invalid
                     p2Input.classList.add('is-invalid');
                     allCoeffsValid = false;
-                } else {
+                } else { // If input is empty
                     player2Coeffs.push(NaN);
-                    p2Input.classList.remove('is-invalid');
+                    p2Input.classList.remove('is-invalid'); // Not invalid if just empty
                 }
             }
         }
 
+        // Determine if enough data is available to show results
+        const hasMinimumInput = !isNaN(player1Coeffs[0]) && !isNaN(player2Coeffs[0]);
+
         if (!allCoeffsValid) {
-            document.getElementById('error').textContent = 'Проверьте формат коэффициентов (например, 1.85).';
-            document.getElementById('error').style.display = 'block';
-            document.getElementById('result').style.display = 'none';
+            errorText.textContent = 'Проверьте формат коэффициентов (например, 1.85).';
+            errorDiv.classList.add('visible');
+            resultDiv.classList.remove('visible'); 
             return;
         }
 
-        if (isNaN(player1Coeffs[0]) || isNaN(player2Coeffs[0])) {
-            document.getElementById('error').textContent = 'Заполните коэффициенты для Гейма 5, чтобы начать расчет.';
-            document.getElementById('error').style.display = 'block';
-            document.getElementById('result').style.display = 'none';
+        if (!hasMinimumInput) {
+            errorText.textContent = 'Заполните коэффициенты для Гейма 5, чтобы начать расчет.';
+            errorDiv.classList.add('visible');
+            resultDiv.classList.remove('visible'); 
             return;
         }
         
-        document.getElementById('error').style.display = 'none';
-        document.getElementById('error').textContent = '';
+        errorText.textContent = ''; 
+        errorDiv.classList.remove('visible'); 
+        
+        // If we are showing results, make sure resultDiv is visible
+        if (!keyboardContainer.classList.contains('show')) { // Only show results if keyboard is not active
+            resultDiv.classList.add('visible'); 
+        }
 
         let totalDecimalPlayer1 = 0;
         let totalDecimalPlayer2 = 0;
@@ -176,18 +191,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (!isNaN(p1Previous) && !isNaN(p1Current)) { 
                     const spreadP1 = p1Previous - p1Current;
-                    if (spreadP1 > 0) { // Коэффициент снизился (Игрок 1 становится сильнее)
+                    if (spreadP1 > 0) { 
                         totalDecreaseSpreadP1 += spreadP1;
-                    } else if (spreadP1 < 0) { // Коэффициент вырос (Игрок 1 становится слабее)
+                    } else if (spreadP1 < 0) { 
                         totalIncreaseSpreadP1 += Math.abs(spreadP1);
                     }
                 }
 
                 if (!isNaN(p2Previous) && !isNaN(p2Current)) {
                     const spreadP2 = p2Previous - p2Current;
-                    if (spreadP2 > 0) { // Коэффициент снизился (Игрок 2 становится сильнее)
+                    if (spreadP2 > 0) { 
                         totalDecreaseSpreadP2 += spreadP2;
-                    } else if (spreadP2 < 0) { // Коэффициент вырос (Игрок 2 становится слабее)
+                    } else if (spreadP2 < 0) { 
                         totalIncreaseSpreadP2 += Math.abs(spreadP2);
                     }
                 }
@@ -264,7 +279,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const p2Current = player2Coeffs[i];
 
             if (!isNaN(p1Current) && !isNaN(p2Current)) {
-                // Get decimal part as an integer (e.g., 1.62 -> 62)
                 const decimalP1 = Math.round((p1Current % 1) * 100);
                 const decimalP2 = Math.round((p2Current % 1) * 100);
                 
@@ -273,7 +287,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (decimalP2 < decimalP1) {
                     player2SmallestDecimalWins++;
                 }
-                // If decimals are equal, neither player gets a "win" for this game.
                 comparisonCount++;
             }
         }
@@ -290,7 +303,6 @@ document.addEventListener('DOMContentLoaded', function() {
             smallestDecimalWinnerMessage += "Ничья (равное количество меньших дес. частей)";
         }
 
-
         document.getElementById('player1_sum').textContent = `Сумма дес. частей (И1): ${totalDecimalPlayer1.toFixed(4)}`;
         document.getElementById('player2_sum').textContent = `Сумма дес. частей (И2): ${totalDecimalPlayer2.toFixed(4)}`;
         document.getElementById('overall_winner_decimal_sum').innerHTML = overallWinnerDecimalSumMessage;
@@ -299,10 +311,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('p2_spread_summary').innerHTML = p2SpreadDetails;
         document.getElementById('overall_winner_spread_analysis').innerHTML = spreadVerdictMessage;
 
-        document.getElementById('overall_winner_smallest_decimal').innerHTML = smallestDecimalWinnerMessage; // Output new result
-
-        document.getElementById('result').style.display = 'block';
+        document.getElementById('overall_winner_smallest_decimal').innerHTML = smallestDecimalWinnerMessage;
     }
 
+    // Call calculateWinner initially to set the correct state
     calculateWinner();
 });

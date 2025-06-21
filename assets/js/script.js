@@ -1,7 +1,9 @@
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM Content Loaded. Initializing script.');
+
     const games = [5, 6, 7, 8, 9, 10];
     const fields = games.flatMap(g => [`g${g}P1`, `g${g}P2`]);
-    const inputElements = fields.map(id => document.getElementById(id));
+    const inputElements = fields.map(id => document.getElementById(id)).filter(el => el !== null);
 
     const resultDiv = document.getElementById('result');
     const errorDiv = document.getElementById('error');
@@ -9,40 +11,94 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const keyboardContainer = document.getElementById('custom-keyboard-container');
     const keyboard = document.getElementById('custom-keyboard');
-    let activeInput = null; // Переменная для отслеживания активного поля ввода
+    let activeInput = null;
+
+    // Функция для блокировки нативной клавиатуры
+    function preventNativeKeyboard(e) {
+        // e.preventDefault(); // Это может вызвать проблемы с фокусом
+        // Вместо preventDefault, мы полагаемся на readonly и focus()
+        if (e.relatedTarget && e.relatedTarget.tagName === 'BUTTON') {
+             // Игнорируем blur, если фокус переходит на кнопку клавиатуры
+             return;
+        }
+        // console.log('preventNativeKeyboard blur on', e.target.id);
+    }
 
     // --- Keyboard Logic ---
     function showKeyboard(input) {
+        console.log('showKeyboard called for input:', input.id);
+        if (activeInput === input && keyboardContainer.classList.contains('show')) {
+            // Клавиатура уже показана для этого инпута, ничего не делаем
+            return;
+        }
+
         activeInput = input;
-        keyboardContainer.classList.add('show');
-        resultDiv.classList.remove('visible'); // Скрываем результат при открытии клавиатуры
-        errorDiv.classList.remove('visible'); // Скрываем ошибки при открытии клавиатуры
+        
+        // Убедимся, что нативная клавиатура не появляется
+        input.blur(); // Снимаем фокус с поля, чтобы нативная клавиатура не вылезла
+        setTimeout(() => { // Даем браузеру время обработать blur
+            input.focus(); // Снова устанавливаем фокус, чтобы активное поле было подсвечено
+            input.setSelectionRange(input.value.length, input.value.length); // Переводим курсор в конец
+            keyboardContainer.style.display = 'flex'; // Показываем контейнер
+            setTimeout(() => {
+                keyboardContainer.classList.add('show'); // Запускаем анимацию
+            }, 50); // Небольшая задержка для плавности
+        }, 50); // Небольшая задержка перед попыткой фокуса снова
+
+        resultDiv.classList.remove('visible');
+        errorDiv.classList.remove('visible');
     }
 
     function hideKeyboard() {
-        activeInput = null;
+        console.log('hideKeyboard called.');
         keyboardContainer.classList.remove('show');
-        calculateWinner(); // Пересчитываем и показываем результат, когда клавиатура скрывается
+        keyboardContainer.addEventListener('transitionend', function handler() {
+            keyboardContainer.style.display = 'none';
+            keyboardContainer.removeEventListener('transitionend', handler);
+            activeInput = null; // Очищаем активный инпут только после полного скрытия
+        }, { once: true }); // Убедимся, что обработчик сработает только один раз
+        
+        // После скрытия клавиатуры, пересчитываем и показываем результат
+        calculateWinner(); 
     }
 
-    // Обработчики событий для полей ввода (фокус/блюр)
+    // Обработчики событий для полей ввода
     inputElements.forEach((input, index) => {
         if (input) {
-            // При фокусе на поле ввода показываем клавиатуру
-            input.addEventListener('focus', function() {
+            input.addEventListener('focus', function(e) {
+                console.log('Input focused:', this.id, 'from event:', e.type);
+                // Отключаем нативную клавиатуру при фокусе, если она всё равно пытается вылезти
+                // this.blur(); 
+                // setTimeout(() => {
+                //     this.focus();
+                // }, 0); 
                 showKeyboard(this);
             });
 
-            // Для мобильных устройств: иногда blur не срабатывает, используем touchstart на body
-            // Но чтобы не скрывать сразу, нужно управлять этим осторожно
-            // Пока оставляем hideKeyboard только по "Далее" или после заполнения всех полей
-            input.addEventListener('blur', function() {
-                // Не скрываем сразу, чтобы можно было переключиться на другое поле или дозаполнить
-                // Скрытие будет по кнопке "Далее" или когда все поля заполнены
+            // На мобильных touchstart иногда работает лучше для инициации фокуса
+            input.addEventListener('touchstart', function(e) {
+                console.log('Input touchstarted:', this.id);
+                // Предотвращаем дефолтное поведение, чтобы избежать нативной клавиатуры
+                e.preventDefault(); 
+                if (document.activeElement !== this) {
+                    this.focus(); // Принудительно устанавливаем фокус
+                }
+            }, { passive: false }); // Важно: passive: false для preventDefault
+
+            // Если поле было в фокусе, но пользователь коснулся где-то ещё, не на кнопке клавиатуры
+            input.addEventListener('blur', function(e) {
+                console.log('Input blurred:', this.id, 'relatedTarget:', e.relatedTarget ? e.relatedTarget.tagName : 'none');
+                // Если фокус ушел на другую часть страницы, а не на кнопку клавиатуры
+                if (e.relatedTarget === null || !keyboard.contains(e.relatedTarget)) {
+                    // console.log('Blur outside keyboard, might hide.');
+                    // hideKeyboard(); // Возможно, потребуется скрыть клавиатуру
+                                    // Это может привести к миганию, если пользователь быстро переключается
+                                    // Лучше скрывать по кнопке "Далее" или когда все заполнено
+                }
             });
 
-            // Настроим обработку input для форматирования и перехода
             input.addEventListener('input', function(e) {
+                console.log('Input value changed:', this.id, this.value);
                 let val = this.value.replace(/[^\d]/g, ''); 
                 if (val.length === 3) {
                     val = val.substring(0, 1) + '.' + val.substring(1, 3);
@@ -51,13 +107,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 this.value = val;
 
-                if (this.value.length === this.maxLength && index < inputElements.length - 1) {
-                    // Если текущее поле заполнено и это не последнее поле, переходим к следующему
-                    inputElements[index + 1].focus();
-                } else if (this.value.length === this.maxLength && index === inputElements.length - 1) {
-                    // Если заполнено последнее поле, скрываем клавиатуру и считаем
-                    this.blur();
-                    hideKeyboard();
+                if (this.value.length === this.maxLength) {
+                    const currentIndex = inputElements.indexOf(this);
+                    if (currentIndex !== -1 && currentIndex < inputElements.length - 1) {
+                        setTimeout(() => {
+                            inputElements[currentIndex + 1].focus();
+                        }, 100); // Немного увеличенная задержка
+                    } else if (currentIndex === inputElements.length - 1) {
+                        // Если это последнее поле и оно заполнено, снять фокус и скрыть клавиатуру
+                        this.blur(); 
+                        hideKeyboard();
+                    }
                 }
             });
         }
@@ -65,44 +125,55 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Обработчик кликов по кнопкам клавиатуры
     keyboard.addEventListener('click', function(e) {
-        if (!activeInput) return; // Если нет активного поля, ничего не делаем
-
+        e.preventDefault(); // Предотвращаем дефолтное поведение (например, потеря фокуса)
         const button = e.target.closest('button');
         if (!button) return;
 
+        if (!activeInput) {
+            console.warn('No active input, keyboard button click ignored.');
+            return;
+        }
+
         const key = button.dataset.key;
+        console.log('Keyboard button pressed:', key);
 
         if (key === 'delete') {
             activeInput.value = activeInput.value.slice(0, -1);
         } else if (key === '.') {
             if (!activeInput.value.includes('.')) {
-                // Если поле пустое и вводим '.', начинаем с '1.'
                 if (activeInput.value === '') {
                     activeInput.value = '1.';
                 } else {
                     activeInput.value += '.';
                 }
             }
+        } else if (key === '0') {
+            if (activeInput.value.length < activeInput.maxLength) {
+                activeInput.value += key;
+            }
         } else if (key === 'next') {
             const currentIndex = inputElements.indexOf(activeInput);
             if (currentIndex !== -1 && currentIndex < inputElements.length - 1) {
-                inputElements[currentIndex + 1].focus(); // Переходим к следующему полю
+                // Сначала убедимся, что фокус переходит, затем скроем
+                activeInput.blur(); // Снимаем фокус с текущего поля
+                inputElements[currentIndex + 1].focus(); // Устанавливаем фокус на следующее
             } else {
-                hideKeyboard(); // Если последнее поле или нет следующего, скрываем клавиатуру
+                hideKeyboard();
             }
-        } else { // Числовые кнопки
+        } else { // Числовые кнопки (1-9)
             if (activeInput.value.length < activeInput.maxLength) {
                 activeInput.value += key;
             }
         }
         
-        // Триггерим событие input, чтобы сработала логика форматирования и перехода
+        // Триггерим событие input
         const event = new Event('input', { bubbles: true });
         activeInput.dispatchEvent(event);
     });
 
-    // --- Main Calculation Function (unchanged from previous version, just ensure visibility handling) ---
+    // --- Main Calculation Function (unchanged) ---
     function calculateWinner() {
+        console.log('calculateWinner called.');
         let player1Coeffs = [];
         let player2Coeffs = [];
         let allCoeffsValid = true;
@@ -115,33 +186,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 const p1Val = parseFloat(p1Input.value);
                 const p2Val = parseFloat(p2Input.value);
 
-                // Validation for Player 1
                 if (!isNaN(p1Val) && p1Val >= 1.00 && p1Val <= 10.00) { 
                     player1Coeffs.push(p1Val);
                     p1Input.classList.remove('is-invalid');
-                } else if (p1Input.value.length > 0) { // If there's input but it's invalid
+                } else if (p1Input.value.length > 0) {
                     p1Input.classList.add('is-invalid');
                     allCoeffsValid = false;
-                } else { // If input is empty
+                } else {
                     player1Coeffs.push(NaN);
-                    p1Input.classList.remove('is-invalid'); // Not invalid if just empty
+                    p1Input.classList.remove('is-invalid');
                 }
 
-                // Validation for Player 2
                 if (!isNaN(p2Val) && p2Val >= 1.00 && p2Val <= 10.00) {
                     player2Coeffs.push(p2Val);
                     p2Input.classList.remove('is-invalid');
-                } else if (p2Input.value.length > 0) { // If there's input but it's invalid
+                } else if (p2Input.value.length > 0) {
                     p2Input.classList.add('is-invalid');
                     allCoeffsValid = false;
-                } else { // If input is empty
+                } else {
                     player2Coeffs.push(NaN);
-                    p2Input.classList.remove('is-invalid'); // Not invalid if just empty
+                    p2Input.classList.remove('is-invalid');
                 }
             }
         }
 
-        // Determine if enough data is available to show results
         const hasMinimumInput = !isNaN(player1Coeffs[0]) && !isNaN(player2Coeffs[0]);
 
         if (!allCoeffsValid) {
@@ -161,8 +229,7 @@ document.addEventListener('DOMContentLoaded', function() {
         errorText.textContent = ''; 
         errorDiv.classList.remove('visible'); 
         
-        // If we are showing results, make sure resultDiv is visible
-        if (!keyboardContainer.classList.contains('show')) { // Only show results if keyboard is not active
+        if (!keyboardContainer.classList.contains('show')) {
             resultDiv.classList.add('visible'); 
         }
 
@@ -209,9 +276,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // --- Output Section ---
-
-        // Decimal Sum Analysis
         let overallWinnerDecimalSumMessage;
         let advantageDecimal = Math.abs(totalDecimalPlayer1 - totalDecimalPlayer2);
 
@@ -223,23 +287,18 @@ document.addEventListener('DOMContentLoaded', function() {
             overallWinnerDecimalSumMessage = "Вероятно трость (разница дес. частей = 0)";
         }
 
-        // --- Spread Analysis for each player and overall verdict ---
-
-        // Player 1 Spread Details and Confidence/Uncertainty
         let p1Uncertainty = 0;
         if ((totalDecreaseSpreadP1 + totalIncreaseSpreadP1) > 0) {
              p1Uncertainty = (totalIncreaseSpreadP1 / (totalDecreaseSpreadP1 + totalIncreaseSpreadP1)) * 100;
         }
         let p1SpreadDetails = `Игрок 1: Снижение Кф. **↓${totalDecreaseSpreadP1.toFixed(4)}** | Уверенность **${(100 - p1Uncertainty).toFixed(2)}%**`;
         
-        // Player 2 Spread Details and Confidence/Uncertainty
         let p2Uncertainty = 0;
         if ((totalDecreaseSpreadP2 + totalIncreaseSpreadP2) > 0) {
             p2Uncertainty = (totalIncreaseSpreadP2 / (totalDecreaseSpreadP2 + totalIncreaseSpreadP2)) * 100;
         }
         let p2SpreadDetails = `Игрок 2: Снижение Кф. **↓${totalDecreaseSpreadP2.toFixed(4)}** | Уверенность **${(100 - p2Uncertainty).toFixed(2)}%**`;
 
-        // Overall Spread Verdict
         let spreadVerdictMessage = "Вердикт по разбегу: ";
 
         let p1HasHigherChances = (totalDecreaseSpreadP1 > 0) && (totalDecreaseSpreadP1 > totalIncreaseSpreadP1);
@@ -269,10 +328,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // --- New Calculation: Smallest Decimal Part Wins ---
         let player1SmallestDecimalWins = 0;
         let player2SmallestDecimalWins = 0;
-        let comparisonCount = 0; // Count of valid comparisons made
+        let comparisonCount = 0;
 
         for (let i = 0; i < games.length; i++) {
             const p1Current = player1Coeffs[i];
@@ -314,6 +372,5 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('overall_winner_smallest_decimal').innerHTML = smallestDecimalWinnerMessage;
     }
 
-    // Call calculateWinner initially to set the correct state
     calculateWinner();
 });

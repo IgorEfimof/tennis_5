@@ -12,11 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const keyboardContainer = document.getElementById('custom-keyboard-container');
     const keyboard = document.getElementById('custom-keyboard');
     let activeInput = null;
-    const clearDataBtn = document.getElementById('clearDataBtn'); 
-
-    // Константы для элементов, которые будут получать рамки
-    const player1IntegerSumDisplay = document.getElementById('player1_integer_sum_display');
-    const player2IntegerSumDisplay = document.getElementById('player2_integer_sum_display');
+    const clearDataBtn = document.getElementById('clearDataBtn'); // Константа для кнопки очистить
 
     // Функция для блокировки нативной клавиатуры (осталась для контроля)
     function preventNativeKeyboard(e) {
@@ -148,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
         activeInput.dispatchEvent(event);
     });
 
-    // --- Новая функция очистки данных ---
+    // --- Функция очистки данных ---
     function clearAllData() {
         console.log('Clearing all data...');
         // Очищаем все поля ввода
@@ -161,13 +157,6 @@ document.addEventListener('DOMContentLoaded', function() {
         resultDiv.classList.remove('visible');
         errorDiv.classList.remove('visible');
         errorText.textContent = ''; // Очищаем текст ошибки
-
-        // Сбрасываем рамки для сумм целых частей
-        player1IntegerSumDisplay.classList.remove('border-green', 'border-red');
-        player2IntegerSumDisplay.classList.remove('border-green', 'border-red');
-        // Очищаем текстовое содержимое (хотя оно и так должно быть пустым)
-        player1IntegerSumDisplay.textContent = '';
-        player2IntegerSumDisplay.textContent = '';
 
         // Возвращаем фокус на первое поле (опционально)
         if (inputElements.length > 0) {
@@ -183,19 +172,12 @@ document.addEventListener('DOMContentLoaded', function() {
         clearDataBtn.addEventListener('click', clearAllData);
     }
 
-    // --- Main Calculation Function (unchanged except for integer sum display) ---
+    // --- Main Calculation Function ---
     function calculateWinner() {
         console.log('calculateWinner called.');
         let player1Coeffs = [];
         let player2Coeffs = [];
         let allCoeffsValid = true;
-
-        let totalDecimalPlayer1 = 0;
-        let totalDecimalPlayer2 = 0;
-        
-        // ПЕРЕМЕННЫЕ ДЛЯ СУММ ЦЕЛЫХ ЧАСТЕЙ
-        let totalIntegerPlayer1 = 0;
-        let totalIntegerPlayer2 = 0;
 
         for (let i = 5; i <= 10; i++) {
             const p1Input = document.getElementById(`g${i}P1`);
@@ -208,7 +190,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!isNaN(p1Val) && p1Val >= 1.00 && p1Val <= 10.00) { 
                     player1Coeffs.push(p1Val);
                     p1Input.classList.remove('is-invalid');
-                    totalIntegerPlayer1 += Math.floor(p1Val); 
                 } else if (p1Input.value.length > 0) {
                     p1Input.classList.add('is-invalid');
                     allCoeffsValid = false;
@@ -220,7 +201,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!isNaN(p2Val) && p2Val >= 1.00 && p2Val <= 10.00) {
                     player2Coeffs.push(p2Val);
                     p2Input.classList.remove('is-invalid');
-                    totalIntegerPlayer2 += Math.floor(p2Val); 
                 } else if (p2Input.value.length > 0) {
                     p2Input.classList.add('is-invalid');
                     allCoeffsValid = false;
@@ -256,7 +236,14 @@ document.addEventListener('DOMContentLoaded', function() {
             resultDiv.classList.add('visible'); 
         }
 
-        // Calculation of decimal sums (unchanged)
+        let totalDecimalPlayer1 = 0;
+        let totalDecimalPlayer2 = 0;
+        
+        let totalDecreaseSpreadP1 = 0;
+        let totalIncreaseSpreadP1 = 0;
+        let totalDecreaseSpreadP2 = 0;
+        let totalIncreaseSpreadP2 = 0;
+
         for (let i = 0; i < games.length; i++) {
             const p1Current = player1Coeffs[i];
             const p2Current = player2Coeffs[i];
@@ -267,16 +254,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!isNaN(p2Current)) {
                 totalDecimalPlayer2 += (p2Current - Math.floor(p2Current));
             }
-        }
-        
-        let totalDecreaseSpreadP1 = 0;
-        let totalIncreaseSpreadP1 = 0;
-        let totalDecreaseSpreadP2 = 0;
-        let totalIncreaseSpreadP2 = 0;
-
-        for (let i = 0; i < games.length; i++) {
-            const p1Current = player1Coeffs[i];
-            const p2Current = player2Coeffs[i];
 
             if (i > 0) {
                 const p1Previous = player1Coeffs[i - 1];
@@ -386,32 +363,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             smallestDecimalWinnerMessage += "Ничья (равное количество меньших дес. частей)";
         }
-
-        // --- ЛОГИКА ДЛЯ РАМОК НА ОСНОВЕ СУММ ЦЕЛЫХ ЧАСТЕЙ ---
-        // Очищаем текстовое содержимое элементов (чтобы не выводить сумму)
-        player1IntegerSumDisplay.textContent = ''; 
-        player2IntegerSumDisplay.textContent = '';
-
-        // Сначала удаляем все рамки, чтобы избежать дублирования
-        player1IntegerSumDisplay.classList.remove('border-green', 'border-red');
-        player2IntegerSumDisplay.classList.remove('border-green', 'border-red');
-
-        // Применяем рамки на основе сравнения сумм целых частей
-        // Только если обе суммы валидны и есть хотя бы одна пара коэффициентов
-        const hasValidIntegerSums = !isNaN(totalIntegerPlayer1) && !isNaN(totalIntegerPlayer2) && (player1Coeffs.some(c => !isNaN(c)) || player2Coeffs.some(c => !isNaN(c)));
-
-        if (hasValidIntegerSums) {
-            if (totalIntegerPlayer1 < totalIntegerPlayer2) {
-                player1IntegerSumDisplay.classList.add('border-green');
-                player2IntegerSumDisplay.classList.add('border-red');
-            } else if (totalIntegerPlayer2 < totalIntegerPlayer1) {
-                player2IntegerSumDisplay.classList.add('border-green');
-                player1IntegerSumDisplay.classList.add('border-red');
-            }
-            // Если равны, рамки не применяются (остаются прозрачными)
-        }
-        // --- КОНЕЦ ЛОГИКИ ДЛЯ РАМОК ---
-
 
         document.getElementById('player1_sum').textContent = `Сумма дес. частей (И1): ${totalDecimalPlayer1.toFixed(4)}`;
         document.getElementById('player2_sum').textContent = `Сумма дес. частей (И2): ${totalDecimalPlayer2.toFixed(4)}`;

@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const keyboardContainer = document.getElementById('custom-keyboard-container');
     const keyboard = document.getElementById('custom-keyboard');
     let activeInput = null;
-    const clearDataBtn = document.getElementById('clearDataBtn'); // Константа для кнопки очистить
+    const clearDataBtn = document.getElementById('clearDataBtn'); // НОВАЯ КОНСТАНТА ДЛЯ КНОПКИ ОЧИСТИТЬ
 
     // Функция для блокировки нативной клавиатуры (осталась для контроля)
     function preventNativeKeyboard(e) {
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
         activeInput.dispatchEvent(event);
     });
 
-    // --- Функция очистки данных ---
+    // --- Новая функция очистки данных ---
     function clearAllData() {
         console.log('Clearing all data...');
         // Очищаем все поля ввода
@@ -172,7 +172,7 @@ document.addEventListener('DOMContentLoaded', function() {
         clearDataBtn.addEventListener('click', clearAllData);
     }
 
-    // --- Main Calculation Function ---
+    // --- Main Calculation Function (unchanged) ---
     function calculateWinner() {
         console.log('calculateWinner called.');
         let player1Coeffs = [];
